@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Voucher</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            border: 2px solid #000;
+            padding: 20px;
+        }
+        h2, h3, h4 {
+            text-align: center;
+            margin: 5px 0;
+        }
+        h4 {
+            font-size: 14px;
+            font-weight: normal;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .header img {
+            max-height: 80px;
+            width: auto;
+            height: auto;
+            max-width: 120px;
+            flex-shrink: 0;
+        }
+        .header-text {
+            flex: 1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        td {
+            padding: 8px;
+            border: 1px solid #000;
+        }
+        .label {
+            font-weight: bold;
+            width: 30%;
+        }
+        .input {
+            width: 100%;
+            border: none;
+            font-size: 16px;
+        }
+        .input:focus {
+            outline: none;
+            border-bottom: 1px solid #000;
+        }
+        .signature {
+            margin-top: 40px;
+            text-align: right;
+        }
+        .btn {
+            margin-top: 20px;
+            background: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .gst-mode-note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            color: #856404;
+        }
+        
+        /* Location Picker Styles */
+        .location-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .location-input-wrapper {
+            flex: 1;
+            display: flex;
+            gap: 5px;
+        }
+        .location-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .location-btn:hover {
+            background: #218838;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 20px;
+            padding: 0;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 800px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            margin: 0;
+            text-align: left;
+        }
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+        }
+        .modal-body {
+            padding: 20px;
+        }
+        .location-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .location-option {
+            padding: 30px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .location-option:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+        .location-option.active {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        .location-option svg {
+            margin-bottom: 15px;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+        #map.show {
+            display: block;
+        }
+        .search-container {
+            margin-top: 15px;
+            display: none;
+        }
+        .search-container.show {
+            display: flex;
+            gap: 10px;
+        }
+        .search-container input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .search-btn {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-btn:hover {
+            background: #0056b3;
+        }
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .coordinates-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            display: none;
+        }
+        .coordinates-display.show {
+            display: block;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .loading.show {
+            display: block;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .location-options {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <input type="hidden" id="voucher_type" value="{{ voucher_type }}">
+    
+    {% if voucher_type == 'gstbill' %}
+    <div class="gst-mode-note">
+        <strong>📋 GST Bill Mode:</strong> Please upload PDF file only in "Additional Receipt" field.
+    </div>
+    {% endif %}
+
+    <div class="header">
+        <img src="/static/logo.png" alt="Company Logo">
+        <div class="header-text">
+            <h2>BARIFLO CYBERNETICS PRIVATE LIMITED</h2>
+            <h4>CIN - U74999OR 2018PTC029923, ROOM NO-207, TB1-2, KIIT TBI, PATIA, BHUBANESWAR, ODISHA</h4>
+            <h3>PAYMENT VOUCHER</h3>
+        </div>
+        <div style="margin-left: auto; text-align: right;">
+            <p>Welcome, {{ session.username if session.username else 'User' }} | <a href="/logout" style="color: #007bff; text-decoration: none;">Logout</a></p>
+        </div>
+    </div>
+
+    <table>
+        <tr>
+            <td class="label">Sl. No.</td>
+            <td><input type="text" id="slno" class="input" value="{{ data.get('Sl No', '') }}"></td>
+            <td class="label">Date</td>
+            <td><input type="date" id="date" class="input" value="{{ data.get('Date', '') }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Name of the Account</td>
+            <td colspan="3"><input type="text" id="account_name" class="input" value="{{ data.get('Name of the Account', '') }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Type of Expenses</td>
+            <td colspan="3"><input type="text" id="debit" class="input" value="{{ data.get('DEBIT', '') }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Transaction ID</td>
+            <td colspan="3">
+            <input type="text" id="credit" class="input" value="{{ data.transaction_id or '' }}">
+            <input type="hidden" id="transaction_id" value="{{ data.transaction_id or '' }}">
+            </td>
+        </tr>
+        <tr>
+            <td class="label">Amount (Rs.)</td>
+            <td colspan="3"><input type="text" id="amount" class="input" value="{{ data.amount or '' }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Time</td>
+            <td colspan="3"><input type="time" id="time" class="input" value="{{ data.get('Time', '') }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Reason</td>
+            <td colspan="3">
+                <select id="reason" class="input">
+                    <option value="">-- Select Reason --</option>
+                    <option value="Diesel purchases" {% if data.get('Reason') == 'Diesel purchases' %}selected{% endif %}>Diesel purchases</option>
+                    <option value="Labour Charges" {% if data.get('Reason') == 'Labour Charges' %}selected{% endif %}>Labour Charges</option>
+                    <option value="Consumables and raw materials" {% if data.get('Reason') == 'Consumables and raw materials' %}selected{% endif %}>Consumables and raw materials</option>
+                    <option value="Travel expenses" {% if data.get('Reason') == 'Travel expenses' %}selected{% endif %}>Travel expenses</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td class="label">The items/services were procured from</td>
+            <td colspan="3"><input type="text" id="procured_from" class="input" value="{{ data.get('Procured From', '') }}"></td>
+        </tr>
+        <tr>
+            <td class="label">Location</td>
+            <td colspan="3">
+                <div class="location-container">
+                    <div class="location-input-wrapper">
+                        <input type="text" id="location" class="input" placeholder="Click 'Pick Location' button" value="{{ data.get('Location', '') }}" readonly>
+                        <input type="hidden" id="location_lat" value="">
+                        <input type="hidden" id="location_lng" value="">
+                    </div>
+                    <button type="button" class="location-btn" onclick="openLocationModal()">
+                        📍 Pick Location
+                    </button>
+                </div>
+            </td>
+        </tr>
+        
+        <tr>
+            <td class="label">Additional Receipt</td>
+            <td colspan="3">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="additional_receipt" class="input" style="flex: 1; min-width: 200px;"
+                        accept="{% if voucher_type == 'gstbill' %}application/pdf{% else %}image/*,application/pdf{% endif %}">
+                    {% if voucher_type != 'gstbill' %}
+                    <button type="button" class="location-btn" onclick="openCameraModal()" style="background: #dc3545;">
+                        📷 Camera
+                    </button>
+                    {% endif %}
+                    {% if voucher_type == 'gstbill' %}
+                    <small style="color: #dc3545;">PDF only</small>
+                    {% endif %}
+                </div>
+                <div id="capturedImagePreview" style="margin-top: 10px; display: none;">
+                    <img id="previewImg" style="max-width: 200px; border: 2px solid #28a745; border-radius: 4px;">
+                    <button type="button" onclick="clearCapturedImage()" style="display: block; margin-top: 5px; background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">Clear Image</button>
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="label">Additional Location</td>
+            <td colspan="3"><input type="file" id="additional_receipt2" class="input" accept="image/*,application/pdf"></td>
+        </tr>
+        <tr>
+            <td class="label">Upload Stamp</td>
+            <td colspan="3"><input type="file" id="upload_stamp" class="input" accept="image/*,application/pdf"></td>
+        </tr>
+    </table>
+
+    <div class="signature">
+        <label>Receiver Signature:</label>
+        <!-- Display user's e-signature from signup, non-editable -->
+        <input type="text" id="receiver_signature" class="input" value="{{ data.user_esignature or data.get('Receiver Signature', '') }}" {% if data.user_esignature %}readonly{% endif %}>
+    </div>
+
+    <button class="btn" onclick="saveVoucher()">Save Voucher</button>
+
+    <!-- Location Modal -->
+    <div id="locationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Location</h2>
+                <span class="close" onclick="closeLocationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Loading map...</p>
+                </div>
+                
+                <div id="locationSelection">
+                    <div class="location-options">
+                        <div class="location-option" onclick="selectLocationMode('current')">
+                            <svg width="60" height="60" fill="none" stroke="#007bff" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M12 8v4l2 2m6-2A10 10 0 1 1 2 12a10 10 0 0 1 18 0z"/>
+                            </svg>
+                            <h3>Use Current Location</h3>
+                            <p>Get your current GPS coordinates</p>
+                        </div>
+                        <div class="location-option" onclick="selectLocationMode('choose')">
+                            <svg width="60" height="60" fill="none" stroke="#28a745" stroke-width="2" viewBox="0 0 24 24">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            <h3>Choose on Map</h3>
+                            <p>Click on the map to select location</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="search-container" id="searchContainer">
+                    <input type="text" id="searchInput" placeholder="Search for a place...">
+                    <button class="search-btn" onclick="searchLocation()">🔍 Search</button>
+                </div>
+                
+                <div id="map"></div>
+                
+                <div class="coordinates-display" id="coordinatesDisplay">
+                    <strong>Selected Coordinates:</strong><br>
+                    <span id="coordsText"></span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background: #6c757d;" onclick="closeLocationModal()">Cancel</button>
+                <button class="btn" id="saveLocationBtn" onclick="saveLocation()" disabled>Save Location</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h2>📷 Capture Receipt</h2>
+                <span class="close" onclick="closeCameraModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="cameraView" style="position: relative;">
+                    <video id="cameraStream" autoplay playsinline style="width: 100%; max-height: 500px; border-radius: 8px; background: #000;"></video>
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px dashed rgba(255,255,255,0.5); width: 80%; height: 80%; pointer-events: none;">
+                        <div style="position: absolute; top: 0; left: 0; width: 20px; height: 20px; border-top: 3px solid #28a745; border-left: 3px solid #28a745;"></div>
+                        <div style="position: absolute; top: 0; right: 0; width: 20px; height: 20px; border-top: 3px solid #28a745; border-right: 3px solid #28a745;"></div>
+                        <div style="position: absolute; bottom: 0; left: 0; width: 20px; height: 20px; border-bottom: 3px solid #28a745; border-left: 3px solid #28a745;"></div>
+                        <div style="position: absolute; bottom: 0; right: 0; width: 20px; height: 20px; border-bottom: 3px solid #28a745; border-right: 3px solid #28a745;"></div>
+                    </div>
+                </div>
+                
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+                
+                <div id="cropView" style="display: none;">
+                    <div style="position: relative; display: inline-block;">
+                        <canvas id="cropCanvas" style="max-width: 100%; border-radius: 8px;"></canvas>
+                        <div id="cropBox" style="position: absolute; border: 2px solid #28a745; cursor: move; background: rgba(40, 167, 69, 0.1);">
+                            <div class="resize-handle" style="position: absolute; width: 10px; height: 10px; background: #28a745; top: -5px; left: -5px; cursor: nw-resize;"></div>
+                            <div class="resize-handle" style="position: absolute; width: 10px; height: 10px; background: #28a745; top: -5px; right: -5px; cursor: ne-resize;"></div>
+                            <div class="resize-handle" style="position: absolute; width: 10px; height: 10px; background: #28a745; bottom: -5px; left: -5px; cursor: sw-resize;"></div>
+                            <div class="resize-handle" style="position: absolute; width: 10px; height: 10px; background: #28a745; bottom: -5px; right: -5px; cursor: se-resize;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <p id="cameraInstruction" style="color: #666;">Position the receipt within the frame and click capture</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" style="background: #6c757d;" onclick="closeCameraModal()">Cancel</button>
+                <button class="btn" id="captureBtn" onclick="capturePhoto()" style="background: #28a745;">📸 Capture</button>
+                <button class="btn" id="retakeBtn" onclick="retakePhoto()" style="background: #ffc107; display: none;">🔄 Retake</button>
+                <button class="btn" id="cropBtn" onclick="applyCrop()" style="display: none;">✂️ Crop & Save</button>
+            </div>
+        </div>
+    </div>
+
+   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+   <script src="/static/savePDF.js"></script>
+
+<script>
+    // Location Picker Variables
+    let map = null;
+    let marker = null;
+    let selectedCoords = null;
+    let locationMode = null;
+
+    // Camera Variables
+    let cameraStream = null;
+    let capturedImageData = null;
+    let cropBoxElement = null;
+    let isDragging = false;
+    let isResizing = false;
+    let startX, startY, startLeft, startTop, startWidth, startHeight;
+    let resizeHandle = null;
+
+    function openLocationModal() {
+        document.getElementById('locationModal').classList.add('show');
+        document.getElementById('loading').classList.add('show');
+        
+        setTimeout(() => {
+            document.getElementById('loading').classList.remove('show');
+        }, 500);
+    }
+
+    function closeLocationModal() {
+        document.getElementById('locationModal').classList.remove('show');
+        if (map) {
+            map.remove();
+            map = null;
+            marker = null;
+        }
+        selectedCoords = null;
+        locationMode = null;
+        document.getElementById('map').classList.remove('show');
+        document.getElementById('searchContainer').classList.remove('show');
+        document.getElementById('coordinatesDisplay').classList.remove('show');
+        document.getElementById('saveLocationBtn').disabled = true;
+        document.querySelectorAll('.location-option').forEach(opt => opt.classList.remove('active'));
+    }
+
+    function selectLocationMode(mode) {
+        locationMode = mode;
+        document.querySelectorAll('.location-option').forEach(opt => opt.classList.remove('active'));
+        event.target.closest('.location-option').classList.add('active');
+        
+        document.getElementById('loading').classList.add('show');
+        
+        setTimeout(() => {
+            document.getElementById('loading').classList.remove('show');
+            document.getElementById('map').classList.add('show');
+            
+            if (mode === 'choose') {
+                document.getElementById('searchContainer').classList.add('show');
+            }
+            
+            initMap(mode);
+        }, 500);
+    }
+
+    function initMap(mode) {
+        if (!map) {
+            // Default to Bhubaneswar
+            const defaultCenter = [20.2961, 85.8245];
+            
+            map = L.map('map').setView(defaultCenter, 13);
+            
+            // Satellite imagery from Esri
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Optional: Add labels overlay on top of satellite
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Add click handler for choosing location
+            if (mode === 'choose') {
+                map.on('click', function(e) {
+                    updateMarker(e.latlng.lat, e.latlng.lng);
+                });
+            }
+        }
+
+        if (mode === 'current') {
+            getCurrentLocation();
+        }
+    }
+
+    function getCurrentLocation() {
+        document.getElementById('loading').classList.add('show');
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    map.setView([lat, lng], 15);
+                    updateMarker(lat, lng);
+                    
+                    document.getElementById('loading').classList.remove('show');
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    alert('Unable to get current location. Please choose manually.');
+                    document.getElementById('loading').classList.remove('show');
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by your browser.');
+            document.getElementById('loading').classList.remove('show');
+        }
+    }
+
+    function updateMarker(lat, lng) {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        marker = L.marker([lat, lng]).addTo(map);
+        selectedCoords = { lat, lng };
+
+        document.getElementById('coordinatesDisplay').classList.add('show');
+        document.getElementById('coordsText').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        document.getElementById('saveLocationBtn').disabled = false;
+
+        // Reverse geocoding
+        reverseGeocode(lat, lng);
+    }
+
+    async function reverseGeocode(lat, lng) {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+            );
+            const data = await response.json();
+            if (data.display_name) {
+                document.getElementById('searchInput').value = data.display_name;
+            }
+        } catch (error) {
+            console.error('Reverse geocoding error:', error);
+        }
+    }
+
+    async function searchLocation() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return;
+
+        document.getElementById('loading').classList.add('show');
+
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`
+            );
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lng = parseFloat(data[0].lon);
+                
+                map.setView([lat, lng], 15);
+                updateMarker(lat, lng);
+            } else {
+                alert('Location not found. Please try a different search.');
+            }
+        } catch (error) {
+            console.error('Search error:', error);
+            alert('Search failed. Please try again.');
+        } finally {
+            document.getElementById('loading').classList.remove('show');
+        }
+    }
+
+    function saveLocation() {
+        if (selectedCoords) {
+            const locationString = `${selectedCoords.lat.toFixed(6)}, ${selectedCoords.lng.toFixed(6)}`;
+            document.getElementById('location').value = locationString;
+            document.getElementById('location_lat').value = selectedCoords.lat;
+            document.getElementById('location_lng').value = selectedCoords.lng;
+            
+            closeLocationModal();
+        }
+    }
+
+    // ========== CAMERA FUNCTIONS ==========
+    
+    async function openCameraModal() {
+        document.getElementById('cameraModal').classList.add('show');
+        
+        try {
+            const constraints = {
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }
+            };
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            document.getElementById('cameraStream').srcObject = cameraStream;
+            
+            // Reset UI
+            document.getElementById('cameraView').style.display = 'block';
+            document.getElementById('cropView').style.display = 'none';
+            document.getElementById('captureBtn').style.display = 'inline-block';
+            document.getElementById('retakeBtn').style.display = 'none';
+            document.getElementById('cropBtn').style.display = 'none';
+            document.getElementById('cameraInstruction').textContent = 'Position the receipt within the frame and click capture';
+            
+        } catch (error) {
+            console.error('Camera error:', error);
+            alert('Unable to access camera. Please check permissions or use file upload instead.');
+            closeCameraModal();
+        }
+    }
+
+    function closeCameraModal() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        document.getElementById('cameraModal').classList.remove('show');
+        capturedImageData = null;
+    }
+
+    function capturePhoto() {
+        const video = document.getElementById('cameraStream');
+        const canvas = document.getElementById('captureCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Stop camera
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Show crop interface
+        document.getElementById('cameraView').style.display = 'none';
+        document.getElementById('cropView').style.display = 'block';
+        document.getElementById('captureBtn').style.display = 'none';
+        document.getElementById('retakeBtn').style.display = 'inline-block';
+        document.getElementById('cropBtn').style.display = 'inline-block';
+        document.getElementById('cameraInstruction').textContent = 'Drag the corners to adjust crop area, then click Crop & Save';
+        
+        // Auto-detect and crop receipt
+        autoDetectReceipt(canvas);
+    }
+
+    function autoDetectReceipt(sourceCanvas) {
+        const cropCanvas = document.getElementById('cropCanvas');
+        const ctx = cropCanvas.getContext('2d');
+        
+        // Draw image to crop canvas
+        cropCanvas.width = sourceCanvas.width;
+        cropCanvas.height = sourceCanvas.height;
+        ctx.drawImage(sourceCanvas, 0, 0);
+        
+        // Simple edge detection - find bright rectangular area
+        const imageData = ctx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+        const detected = detectBrightRectangle(imageData);
+        
+        // Initialize crop box
+        cropBoxElement = document.getElementById('cropBox');
+        
+        if (detected) {
+            // Use detected area
+            cropBoxElement.style.left = detected.x + 'px';
+            cropBoxElement.style.top = detected.y + 'px';
+            cropBoxElement.style.width = detected.width + 'px';
+            cropBoxElement.style.height = detected.height + 'px';
+        } else {
+            // Default to 80% center crop
+            const defaultWidth = cropCanvas.width * 0.8;
+            const defaultHeight = cropCanvas.height * 0.8;
+            const defaultX = (cropCanvas.width - defaultWidth) / 2;
+            const defaultY = (cropCanvas.height - defaultHeight) / 2;
+            
+            cropBoxElement.style.left = defaultX + 'px';
+            cropBoxElement.style.top = defaultY + 'px';
+            cropBoxElement.style.width = defaultWidth + 'px';
+            cropBoxElement.style.height = defaultHeight + 'px';
+        }
+        
+        // Add drag and resize handlers
+        setupCropHandlers();
+    }
+
+    function detectBrightRectangle(imageData) {
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        
+        // Sample every 10th pixel for performance
+        let minX = width, minY = height, maxX = 0, maxY = 0;
+        let foundBright = false;
+        
+        for (let y = 0; y < height; y += 10) {
+            for (let x = 0; x < width; x += 10) {
+                const i = (y * width + x) * 4;
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                
+                // Detect bright areas (likely paper)
+                if (brightness > 180) {
+                    foundBright = true;
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        
+        if (foundBright && (maxX - minX) > 100 && (maxY - minY) > 100) {
+            // Add 5% margin
+            const margin = 20;
+            return {
+                x: Math.max(0, minX - margin),
+                y: Math.max(0, minY - margin),
+                width: Math.min(width - minX + margin, maxX - minX + margin * 2),
+                height: Math.min(height - minY + margin, maxY - minY + margin * 2)
+            };
+        }
+        
+        return null;
+    }
+
+    function setupCropHandlers() {
+        cropBoxElement = document.getElementById('cropBox');
+        const handles = cropBoxElement.querySelectorAll('.resize-handle');
+        
+        // Drag to move
+        cropBoxElement.addEventListener('mousedown', startDrag);
+        
+        // Resize handles
+        handles.forEach(handle => {
+            handle.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                startResize(e, handle);
+            });
+        });
+        
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', stopDragResize);
+    }
+
+    function startDrag(e) {
+        if (e.target.classList.contains('resize-handle')) return;
+        
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = parseInt(cropBoxElement.style.left);
+        startTop = parseInt(cropBoxElement.style.top);
+    }
+
+    function startResize(e, handle) {
+        isResizing = true;
+        resizeHandle = handle;
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = parseInt(cropBoxElement.style.left);
+        startTop = parseInt(cropBoxElement.style.top);
+        startWidth = parseInt(cropBoxElement.style.width);
+        startHeight = parseInt(cropBoxElement.style.height);
+    }
+
+    function onMouseMove(e) {
+        if (isDragging) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            cropBoxElement.style.left = (startLeft + dx) + 'px';
+            cropBoxElement.style.top = (startTop + dy) + 'px';
+        }
+        
+        if (isResizing) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            const corner = resizeHandle.style.cursor;
+            
+            if (corner.includes('nw')) {
+                cropBoxElement.style.left = (startLeft + dx) + 'px';
+                cropBoxElement.style.top = (startTop + dy) + 'px';
+                cropBoxElement.style.width = (startWidth - dx) + 'px';
+                cropBoxElement.style.height = (startHeight - dy) + 'px';
+            } else if (corner.includes('ne')) {
+                cropBoxElement.style.top = (startTop + dy) + 'px';
+                cropBoxElement.style.width = (startWidth + dx) + 'px';
+                cropBoxElement.style.height = (startHeight - dy) + 'px';
+            } else if (corner.includes('sw')) {
+                cropBoxElement.style.left = (startLeft + dx) + 'px';
+                cropBoxElement.style.width = (startWidth - dx) + 'px';
+                cropBoxElement.style.height = (startHeight + dy) + 'px';
+            } else if (corner.includes('se')) {
+                cropBoxElement.style.width = (startWidth + dx) + 'px';
+                cropBoxElement.style.height = (startHeight + dy) + 'px';
+            }
+        }
+    }
+
+    function stopDragResize() {
+        isDragging = false;
+        isResizing = false;
+        resizeHandle = null;
+    }
+
+    function applyCrop() {
+        const sourceCanvas = document.getElementById('cropCanvas');
+        const cropBox = document.getElementById('cropBox');
+        
+        const x = parseInt(cropBox.style.left);
+        const y = parseInt(cropBox.style.top);
+        const width = parseInt(cropBox.style.width);
+        const height = parseInt(cropBox.style.height);
+        
+        // Create final cropped canvas
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = width;
+        finalCanvas.height = height;
+        const finalCtx = finalCanvas.getContext('2d');
+        
+        finalCtx.drawImage(sourceCanvas, x, y, width, height, 0, 0, width, height);
+        
+        // Convert to blob and create file
+        finalCanvas.toBlob((blob) => {
+            const file = new File([blob], 'captured_receipt.jpg', { type: 'image/jpeg' });
+            
+            // Create a DataTransfer to set the file input
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById('additional_receipt').files = dataTransfer.files;
+            
+            // Show preview
+            const previewImg = document.getElementById('previewImg');
+            previewImg.src = URL.createObjectURL(blob);
+            document.getElementById('capturedImagePreview').style.display = 'block';
+            
+            closeCameraModal();
+            alert('✅ Photo captured and cropped successfully!');
+        }, 'image/jpeg', 0.9);
+    }
+
+    function retakePhoto() {
+        openCameraModal();
+    }
+
+    function clearCapturedImage() {
+        document.getElementById('additional_receipt').value = '';
+        document.getElementById('capturedImagePreview').style.display = 'none';
+    }
+
+    // Original saveVoucher function
+    function saveVoucher() {
+        const voucherType = document.getElementById('voucher_type').value;
+        const form = document.body;
+
+        html2canvas(form).then(canvas => {
+            const imageData = canvas.toDataURL('image/png');
+
+            const formData = new FormData();
+            formData.append('image_data', imageData);
+            formData.append('slno', document.getElementById('slno').value);
+            formData.append('date', document.getElementById('date').value);
+            formData.append('account_name', document.getElementById('account_name').value);
+            formData.append('debit', document.getElementById('debit').value);
+            formData.append('credit', document.getElementById('credit').value);
+            formData.append('amount', document.getElementById('amount').value);
+            formData.append('time', document.getElementById('time').value);
+            formData.append('reason', document.getElementById('reason').value);
+            formData.append('procured_from', document.getElementById('procured_from').value);
+            formData.append('location', document.getElementById('location').value);
+            formData.append('location_lat', document.getElementById('location_lat').value);
+            formData.append('location_lng', document.getElementById('location_lng').value);
+            // Use user's e-signature if available, otherwise use the entered one
+            const userSignature = document.getElementById('receiver_signature').getAttribute('data-user-signature') || '';
+            const enteredSignature = document.getElementById('receiver_signature').value;
+            const finalSignature = userSignature || enteredSignature;
+            
+            formData.append('receiver_signature', finalSignature);
+            formData.append('transaction_id', document.getElementById('transaction_id').value);
+            formData.append('voucher_type', voucherType);
+
+            const fileInput1 = document.getElementById('additional_receipt');
+            if (fileInput1.files.length > 0) {
+                formData.append('additional_receipt', fileInput1.files[0]);
+            }
+            const fileInput3 = document.getElementById('additional_receipt2');
+            if (fileInput3.files.length > 0) {
+                formData.append('additional_receipt2', fileInput3.files[0]);
+            }
+
+            const fileInput2 = document.getElementById('upload_stamp');
+            if (fileInput2.files.length > 0) {
+                formData.append('upload_stamp', fileInput2.files[0]);
+            }
+
+            fetch(`/save_voucher`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(resp => {
+                if (!resp.ok) throw new Error("Server error");
+                return resp.json();
+            })
+            .then(result => {
+                if (!result.record_id) {
+                    throw new Error("No record ID returned from server.");
+                }
+
+                fetch(`/voucher_image/${result.record_id}`)
+                    .then(imgResp => {
+                        if (!imgResp.ok) throw new Error("Failed to fetch voucher image.");
+                        return imgResp.blob();
+                    })
+                    .then(blob => {
+                        const imageLink = document.createElement('a');
+                        imageLink.href = URL.createObjectURL(blob);
+                        imageLink.download = "voucher.png";
+                        document.body.appendChild(imageLink);
+                        imageLink.click();
+                        imageLink.remove();
+
+                        savePDF(result.record_id, () => {
+                            if (voucherType === 'gstbill') {
+                                alert("✅ GST Bill voucher and PDF downloaded!");
+                            } else {
+                                alert("✅ Voucher saved and PDF downloaded!");
+                            }
+                        });
+                    })
+                    .catch(imgErr => {
+                        console.error(imgErr);
+                        alert("⚠️ Voucher saved, but image fetch failed.");
+                        savePDF(result.record_id, () => {
+                            if (voucherType === 'gstbill') {
+                                alert("✅ GST Bill PDF downloaded!");
+                            } else {
+                                alert("✅ Voucher saved and PDF downloaded!");
+                            }
+                        });
+                    });
+            })
+            .catch(err => {
+                console.error(err);
+                alert("❌ Failed to save voucher.");
+            });
+
+        });
+    }
+</script>
+
+</body>
+</html>

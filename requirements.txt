@@ -1,0 +1,20 @@
+# Core Dependencies
+APScheduler==3.11.0
+python-telegram-bot==20.3
+requests
+python-dotenv
+pytz==2025.2
+reportlab
+flask
+flask-session
+psycopg2-binary
+word2number
+
+# Image Processing
+Pillow==10.4.0
+numpy==1.26.4
+
+# PaddleOCR (Python 3.10 compatible)
+opencv-python==4.6.0.66
+paddlepaddle==2.6.2
+paddleocr==2.7.3
