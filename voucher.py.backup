@@ -1,11 +1,11 @@
 import os
 import logging
-import psycopg2
 import base64
+import psycopg2
+from datetime import datetime, timedelta
 import uuid
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
 from flask_session import Session
-from datetime import datetime, timedelta
 from io import BytesIO
 from email.message import EmailMessage
 import smtplib
@@ -17,10 +17,10 @@ import pytz
 voucher_data = {}
 
 # Import user management functions
-from database import init_db, register_user, get_user_by_email, get_user_by_username, get_pending_users, update_user_status, get_user_by_id, get_accepted_users, get_rejected_users
+from database import init_db, register_user, get_user_by_email, get_user_by_username, register_user_with_signature
 
 # Flask app
-voucher_app = Flask(__name__)
+voucher_app = Flask(__name__, static_folder='static', static_url_path='/static')
 voucher_app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key in production
 voucher_app.config['SESSION_TYPE'] = 'filesystem'
 Session(voucher_app)
@@ -40,66 +40,6 @@ DATABASE_CONFIG = {
 logging.basicConfig(level=logging.INFO)
 
 # Initialize the database
-def init_db():
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        cur.execute('''
-            CREATE TABLE IF NOT EXISTS brochure (
-                id SERIAL PRIMARY KEY,
-                slno TEXT,
-                date TEXT,
-                account_name TEXT,
-                debit TEXT,
-                credit TEXT,
-                amount TEXT,
-                time TEXT,
-                reason TEXT,
-                procured_from TEXT,
-                location TEXT,
-                additional_receipt BYTEA,
-                receiver_signature TEXT,
-                signature_image BYTEA,
-                image BYTEA,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        ''')
-        
-        # ⭐ NEW: Check and add location columns if they don't exist
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='brochure' AND column_name='location_lat';
-        """)
-        
-        if not cur.fetchone():
-            cur.execute('''
-                ALTER TABLE brochure 
-                ADD COLUMN location_lat DECIMAL(10, 8),
-                ADD COLUMN location_lng DECIMAL(11, 8);
-            ''')
-            logging.info("✅ Added location columns to brochure table")
-            
-        # ⭐ NEW: Check and add signature_image column if it doesn't exist
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='brochure' AND column_name='signature_image';
-        """)
-        
-        if not cur.fetchone():
-            cur.execute('''
-                ALTER TABLE brochure 
-                ADD COLUMN signature_image BYTEA;
-            ''')
-            logging.info("✅ Added signature_image column to brochure table")
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        logging.info("✅ Database initialized.")
-    except Exception as e:
-        logging.error(f"❌ Failed to init DB: {e}")
 
 def send_telegram_notification(transaction_id, account_name, amount):
     """Send notification to Telegram when voucher is completed"""
@@ -276,10 +216,23 @@ def signup():
         
         # Register user (without checking for duplicate username)
         # Pass both the processed signature text and the signature image data
-        user_id = register_user(username, email, password, processed_signature, signature_image_data)  # In production, hash the password
+        user_id = register_user_with_signature(username, email, password, processed_signature, signature_image_data)  # In production, hash the password
         if user_id:
-            # Show pending approval message instead of auto-login
-            return render_template('signup.html', success="Registration successful! Your request is pending administrator authorization. Please wait for approval before logging in.", transaction_id=transaction_id, voucher_type=voucher_type)
+            # Automatically log in the user after successful signup
+            session['user_id'] = user_id
+            session['username'] = username
+            session['user_esignature'] = processed_signature
+            # Store signature image data in session if it exists
+            if signature_image_data:
+                session['user_signature_image'] = esignature  # Store the base64 data for later use
+            
+            # Store transaction info in session temporarily and redirect to display voucher
+            if transaction_id and voucher_type:
+                session['temp_transaction_id'] = transaction_id
+                session['temp_voucher_type'] = voucher_type
+                return redirect(url_for('display_voucher'))
+            else:
+                return redirect(url_for('display_voucher'))
         else:
             return render_template('signup.html', error="Registration failed. Please try again.", transaction_id=transaction_id, voucher_type=voucher_type)
     
@@ -298,67 +251,29 @@ def login():
         password = request.form['password']
         
         user = get_user_by_email(email)
-        if user:
-            # User exists, check password
-            if user['password'] == password:  # In production, use proper password hashing
-                # Check if user is approved
-                user_status = user.get('status', 'pending')
-                if user_status != 'accepted':
-                    return render_template('login.html', error=f"Your account is pending approval. Current status: {user_status}. Please contact administrator.", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
-                
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['user_esignature'] = user['esignature']
-                # Store signature image data in session if it exists
-                if user.get('signature_image'):
-                    # Convert signature image to base64 if it exists
-                    signature_image_base64 = 'data:image/png;base64,' + base64.b64encode(user['signature_image']).decode('utf-8')
-                    session['user_signature_image'] = signature_image_base64
-                
-                # After login, redirect to display voucher page with original parameters
-                # Store transaction info in session temporarily
-                if transaction_id and voucher_type:
-                    session['temp_transaction_id'] = transaction_id
-                    session['temp_voucher_type'] = voucher_type
-                    return redirect(url_for('display_voucher'))
-                else:
-                    return redirect(url_for('display_voucher'))
+        if user and user['password'] == password:  # In production, use proper password hashing
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['user_esignature'] = user['esignature']
+            # Store signature image data in session if it exists
+            if user.get('signature_image'):
+                # Convert signature image to base64 if it exists
+                signature_image_base64 = 'data:image/png;base64,' + base64.b64encode(user['signature_image']).decode('utf-8')
+                session['user_signature_image'] = signature_image_base64
+            
+            # After login, redirect to display voucher page with original parameters
+            # Store transaction info in session temporarily
+            if transaction_id and voucher_type:
+                session['temp_transaction_id'] = transaction_id
+                session['temp_voucher_type'] = voucher_type
+                return redirect(url_for('display_voucher'))
             else:
-                return render_template('login.html', error="Invalid password", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
+                return redirect(url_for('display_voucher'))
         else:
-            return render_template('login.html', error="User not found", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
+            return render_template('login.html', error="Invalid credentials", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
     
     # Pass through transaction parameters to login form
     return render_template('login.html', transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
-
-# Admin Dashboard Routes
-@voucher_app.route("/admin/dashboard")
-def admin_dashboard():
-    # Simple admin check - in production, implement proper authentication
-    # For now, we'll protect this with a simple check or environment variable
-    pending_users = get_pending_users()
-    accepted_users = get_accepted_users()
-    rejected_users = get_rejected_users()
-    return render_template('admin_dashboard.html', 
-                         pending_users=pending_users,
-                         accepted_users=accepted_users,
-                         rejected_users=rejected_users)
-
-@voucher_app.route("/admin/approve_user/<int:user_id>")
-def approve_user(user_id):
-    # Simple admin check - in production, implement proper authentication
-    if update_user_status(user_id, 'accepted'):
-        return jsonify({'success': True, 'message': 'User approved successfully'})
-    else:
-        return jsonify({'success': False, 'message': 'Failed to approve user'}), 500
-
-@voucher_app.route("/admin/reject_user/<int:user_id>")
-def reject_user(user_id):
-    # Simple admin check - in production, implement proper authentication
-    if update_user_status(user_id, 'rejected'):
-        return jsonify({'success': True, 'message': 'User rejected successfully'})
-    else:
-        return jsonify({'success': False, 'message': 'Failed to reject user'}), 500
 
 @voucher_app.route("/display_voucher", methods=["GET"])
 def display_voucher():

@@ -21,6 +21,15 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 350px;
+            text-align: center;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 3px solid #007bff;
+            padding: 5px;
         }
         .login-container h2 {
             text-align: center;
@@ -29,6 +38,7 @@
         }
         .form-group {
             margin-bottom: 15px;
+            text-align: left;
         }
         .form-group label {
             display: block;
@@ -89,6 +99,7 @@
 </head>
 <body>
     <div class="login-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
         <h2>Login to Payment Voucher System</h2>
         {% if error %}
         <div class="error-message">{{ error }}</div>

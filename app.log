@@ -1,0 +1,348 @@
+nohup: ignoring input
+ * Serving Flask app 'voucher'
+ * Debug mode: off
+[2025-12-08 15:38:15,010] [    INFO] _internal.py:97 - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.30:5000
+[2025-12-08 15:38:15,010] [    INFO] _internal.py:97 - [33mPress CTRL+C to quit[0m
+[2025-12-08 15:40:36,882] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:40:36,883] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:40:42,504] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:40:42,504] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:32,460] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:32,461] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:38,524] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:38,524] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:45,188] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:45,189] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:53,338] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:41:53,338] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:00,558] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:00,559] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:12,320] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:12,321] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:28,942] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:28,942] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:46,500] [   ERROR] _updater.py:620 - Error while getting Updates: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+[2025-12-08 15:42:46,501] [   ERROR] _application.py:1682 - No error handlers are registered, logging exception.
+Traceback (most recent call last):
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 607, in _network_loop_retry
+    if not await action_cb():
+           ^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 335, in polling_action_cb
+    raise exc
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_updater.py", line 320, in polling_action_cb
+    updates = await self.bot.get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 543, in get_updates
+    updates = await super().get_updates(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 381, in decorator
+    result = await func(self, *args, **kwargs)  # skipcq: PYL-E1102
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 3661, in get_updates
+    await self._post(
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 469, in _post
+    return await self._do_post(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 325, in _do_post
+    return await super()._do_post(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/_bot.py", line 497, in _do_post
+    return await request.post(
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 168, in post
+    result = await self._request_wrapper(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/webdev/Bfl_Telegrambot_PaddleOCR/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 330, in _request_wrapper
+    raise Conflict(message)
+telegram.error.Conflict: Conflict: terminated by other getUpdates request; make sure that only one bot instance is running

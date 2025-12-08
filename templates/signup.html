@@ -21,6 +21,15 @@
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 350px;
+            text-align: center;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 3px solid #007bff;
+            padding: 5px;
         }
         .signup-container h2 {
             text-align: center;
@@ -29,6 +38,7 @@
         }
         .form-group {
             margin-bottom: 15px;
+            text-align: left;
         }
         .form-group label {
             display: block;
@@ -46,7 +56,7 @@
         .btn {
             width: 100%;
             padding: 12px;
-            background-color: #28a745;
+            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 5px;
@@ -55,7 +65,7 @@
             margin-top: 10px;
         }
         .btn:hover {
-            background-color: #218838;
+            background-color: #0056b3;
         }
         .login-link {
             text-align: center;
@@ -79,13 +89,98 @@
             margin-bottom: 15px;
             font-size: 14px;
         }
+        
+        /* Signature Pad Styles */
+        .signature-pad {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #fff;
+        }
+        
+        .signature-tabs {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .signature-tab {
+            flex: 1;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .signature-tab:first-child {
+            border-radius: 5px 0 0 5px;
+        }
+        
+        .signature-tab:last-child {
+            border-radius: 0 5px 5px 0;
+        }
+        
+        .signature-tab.active {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .signature-content {
+            display: none;
+        }
+        
+        .signature-content.active {
+            display: block;
+        }
+        
+        .draw-signature canvas {
+            width: 100%;
+            height: 150px;
+            cursor: crosshair;
+        }
+        
+        .type-signature input {
+            width: 100%;
+            padding: 10px;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 24px;
+            text-align: center;
+        }
+        
+        .signature-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .signature-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .clear-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .clear-btn:hover {
+            background-color: #bd2130;
+        }
     </style>
 </head>
 <body>
     <div class="signup-container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
         <h2>Create Account</h2>
         {% if error %}
         <div class="error-message">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="error-message" style="color: green;">{{ success }}</div>
         {% endif %}
         {% if transaction_id %}
         <div class="info-message">Please create an account to access the voucher</div>
@@ -107,15 +202,195 @@
                 <label for="confirm_password">Confirm Password:</label>
                 <input type="password" id="confirm_password" name="confirm_password" required>
             </div>
+            
+            <!-- Signature Generator -->
             <div class="form-group">
                 <label for="esignature">E-Signature:</label>
-                <input type="text" id="esignature" name="esignature" required>
+                <input type="hidden" id="esignature" name="esignature" required>
+                
+                <div class="signature-generator">
+                    <div class="signature-tabs">
+                        <div class="signature-tab active" data-tab="draw">Draw Signature</div>
+                        <div class="signature-tab" data-tab="type">Type Signature</div>
+                    </div>
+                    
+                    <div class="signature-content active" id="draw-signature">
+                        <div class="signature-pad">
+                            <canvas id="signature-canvas" class="draw-signature" height="150"></canvas>
+                        </div>
+                        <div class="signature-actions">
+                            <button type="button" class="clear-btn" id="clear-canvas">Clear</button>
+                        </div>
+                    </div>
+                    
+                    <div class="signature-content" id="type-signature">
+                        <input type="text" id="typed-signature" placeholder="Type your signature here">
+                    </div>
+                </div>
             </div>
+            
             <button type="submit" class="btn">Sign Up</button>
         </form>
         <div class="login-link">
             Already have an account? <a href="/login{% if transaction_id %}?transaction_id={{ transaction_id }}{% if voucher_type %}&type={{ voucher_type }}{% endif %}{% endif %}">Login</a>
         </div>
     </div>
+
+    <script>
+        // Signature Pad Implementation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Canvas drawing functionality
+            const canvas = document.getElementById('signature-canvas');
+            const ctx = canvas.getContext('2d');
+            const hiddenInput = document.getElementById('esignature');
+            
+            // Set canvas dimensions
+            function resizeCanvas() {
+                const displayWidth = canvas.clientWidth;
+                const displayHeight = canvas.clientHeight;
+                
+                if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                    const ratio = window.devicePixelRatio || 1;
+                    canvas.width = displayWidth * ratio;
+                    canvas.height = displayHeight * ratio;
+                    canvas.style.width = displayWidth + 'px';
+                    canvas.style.height = displayHeight + 'px';
+                    ctx.scale(ratio, ratio);
+                }
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Drawing variables
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            
+            // Drawing functions
+            function startDrawing(e) {
+                isDrawing = true;
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+            }
+            
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+                
+                // Update hidden input with base64 data
+                updateHiddenInput();
+            }
+            
+            function stopDrawing() {
+                isDrawing = false;
+            }
+            
+            function updateHiddenInput() {
+                hiddenInput.value = canvas.toDataURL('image/png');
+            }
+            
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hiddenInput.value = '';
+            }
+            
+            // Event listeners for drawing
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch events for mobile devices
+            canvas.addEventListener('touchstart', function(e) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            canvas.addEventListener('touchmove', function(e) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            canvas.addEventListener('touchend', function() {
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            });
+            
+            // Clear button
+            document.getElementById('clear-canvas').addEventListener('click', clearCanvas);
+            
+            // Tab switching functionality
+            const tabs = document.querySelectorAll('.signature-tab');
+            const contents = document.querySelectorAll('.signature-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabType = this.getAttribute('data-tab');
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update active content
+                    contents.forEach(content => content.classList.remove('active'));
+                    document.getElementById(`${tabType}-signature`).classList.add('active');
+                    
+                    // If switching to type tab, clear canvas
+                    if (tabType === 'type') {
+                        clearCanvas();
+                    }
+                });
+            });
+            
+            // Typed signature functionality
+            const typedSignature = document.getElementById('typed-signature');
+            
+            typedSignature.addEventListener('input', function() {
+                hiddenInput.value = this.value;
+            });
+            
+            // Form submission validation
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(e) {
+                const activeTab = document.querySelector('.signature-tab.active').getAttribute('data-tab');
+                
+                if (activeTab === 'draw') {
+                    // For draw tab, check if canvas has content
+                    const canvasData = canvas.toDataURL('image/png');
+                    if (canvasData === 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==') {
+                        alert('Please draw your signature or switch to type signature');
+                        e.preventDefault();
+                        return;
+                    }
+                } else {
+                    // For type tab, check if input has value
+                    if (!typedSignature.value.trim()) {
+                        alert('Please type your signature or switch to draw signature');
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>

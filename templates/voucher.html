@@ -388,20 +388,19 @@
                 </div>
             </td>
         </tr>
-        <tr>
-            <td class="label">Additional Location</td>
-            <td colspan="3"><input type="file" id="additional_receipt2" class="input" accept="image/*,application/pdf"></td>
-        </tr>
-        <tr>
-            <td class="label">Upload Stamp</td>
-            <td colspan="3"><input type="file" id="upload_stamp" class="input" accept="image/*,application/pdf"></td>
-        </tr>
     </table>
 
     <div class="signature">
-        <label>Receiver Signature:</label>
         <!-- Display user's e-signature from signup, non-editable -->
-        <input type="text" id="receiver_signature" class="input" value="{{ data.user_esignature or data.get('Receiver Signature', '') }}" {% if data.user_esignature %}readonly{% endif %}>
+        <!-- If it's a drawn signature, display the image; otherwise display as text -->
+        {% if data.user_signature_image %}
+            <div id="receiver_signature_container">
+                <img src="{{ data.user_signature_image }}" alt="Signature" style="height: 90px; display: block; margin: 10px 0;">
+            </div>
+            <input type="hidden" id="receiver_signature" value="{{ data.user_esignature }}">
+        {% else %}
+            <input type="text" id="receiver_signature" class="input" value="{{ data.user_esignature or data.get('Receiver Signature', '') }}" {% if data.user_esignature %}readonly{% endif %}>
+        {% endif %}
     </div>
 
     <button class="btn" onclick="saveVoucher()">Save Voucher</button>
@@ -990,9 +989,20 @@
             formData.append('location_lat', document.getElementById('location_lat').value);
             formData.append('location_lng', document.getElementById('location_lng').value);
             // Use user's e-signature if available, otherwise use the entered one
-            const userSignature = document.getElementById('receiver_signature').getAttribute('data-user-signature') || '';
-            const enteredSignature = document.getElementById('receiver_signature').value;
-            const finalSignature = userSignature || enteredSignature;
+            // Handle both text and image signature displays
+            let finalSignature = '';
+            const signatureTextInput = document.getElementById('receiver_signature');
+            const signatureImageContainer = document.getElementById('receiver_signature_container');
+            
+            if (signatureImageContainer) {
+                // It's a drawn signature, use the placeholder text
+                finalSignature = '[Drawn Signature]';
+            } else if (signatureTextInput) {
+                // It's a text signature
+                const userSignature = signatureTextInput.getAttribute('data-user-signature') || '';
+                const enteredSignature = signatureTextInput.value;
+                finalSignature = userSignature || enteredSignature;
+            }
             
             formData.append('receiver_signature', finalSignature);
             formData.append('transaction_id', document.getElementById('transaction_id').value);
@@ -1001,15 +1011,6 @@
             const fileInput1 = document.getElementById('additional_receipt');
             if (fileInput1.files.length > 0) {
                 formData.append('additional_receipt', fileInput1.files[0]);
-            }
-            const fileInput3 = document.getElementById('additional_receipt2');
-            if (fileInput3.files.length > 0) {
-                formData.append('additional_receipt2', fileInput3.files[0]);
-            }
-
-            const fileInput2 = document.getElementById('upload_stamp');
-            if (fileInput2.files.length > 0) {
-                formData.append('upload_stamp', fileInput2.files[0]);
             }
 
             fetch(`/save_voucher`, {

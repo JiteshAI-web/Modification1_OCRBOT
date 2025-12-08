@@ -24,14 +24,14 @@ def init_db():
         cur.execute('''
             CREATE TABLE IF NOT EXISTS extracted_receipts (
                 id SERIAL PRIMARY KEY,
-                user_id BIGINT,
+                user_id INTEGER,
                 category VARCHAR(50),
-                amount TEXT,
-                datetime TEXT,
-                transaction_id TEXT NULL,
+                amount VARCHAR(50),
+                datetime VARCHAR(100),
+                transaction_id VARCHAR(100),
+                person_name VARCHAR(100),
+                upi_id VARCHAR(100),
                 status VARCHAR(20) DEFAULT 'pending',
-                person_name TEXT,
-                upi_id TEXT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
@@ -40,7 +40,6 @@ def init_db():
         cur.execute('''
             CREATE TABLE IF NOT EXISTS brochure (
                 id SERIAL PRIMARY KEY,
-                session_id UUID UNIQUE,
                 slno TEXT,
                 date TEXT,
                 account_name TEXT,
@@ -52,9 +51,8 @@ def init_db():
                 procured_from TEXT NULL,
                 location TEXT NULL,
                 additional_receipt BYTEA NULL,
-                additional_receipt2 BYTEA NULL,
-                upload_stamp BYTEA,
                 receiver_signature TEXT,
+                signature_image BYTEA,
                 image BYTEA,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -69,60 +67,16 @@ def init_db():
                 password VARCHAR(255) NOT NULL,
                 esignature TEXT,
                 signature_image BYTEA,
-                status VARCHAR(10) DEFAULT 'pending',  -- New column for accept/reject status
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
-        
-        # Check and add status column if it doesn't exist
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='status';
-        """)
-        
-        if not cur.fetchone():
-            cur.execute('''
-                ALTER TABLE users 
-                ADD COLUMN status VARCHAR(10) DEFAULT 'pending';
-            ''')
-            logging.info("✅ Added status column to users table")
-            
+
         conn.commit()
         cur.close()
         conn.close()
         logging.info("✅ Database initialized successfully.")
     except Exception as e:
         logging.error(f"❌ Error initializing database: {e}")
-
-def add_signature_image_column():
-    """Add signature_image column to users table if it doesn't exist"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        # Check if signature_image column exists
-        cur.execute("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='signature_image';
-        """)
-        
-        if not cur.fetchone():
-            cur.execute('''
-                ALTER TABLE users 
-                ADD COLUMN signature_image BYTEA;
-            ''')
-            logging.info("✅ Added signature_image column to users table")
-            
-        conn.commit()
-        cur.close()
-        conn.close()
-    except Exception as e:
-        logging.error(f"❌ Error adding signature_image column: {e}")
-
-# Call this function after init_db to ensure column exists
-add_signature_image_column()
 
 def insert_extracted_receipt(user_id, category, fields):
     """Insert extracted receipt data and return the record ID"""
@@ -167,11 +121,11 @@ def insert_or_update_brochure(data):
         cur = conn.cursor()
         cur.execute('''
             INSERT INTO brochure (
-                session_id, slno, date, account_name, debit, credit,
-                amount, time , reason, procured_from, location, receiver_signature
+                slno, date, account_name, debit, credit,
+                amount, time , reason, procured_from, location, receiver_signature, signature_image
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', data)  # ✅ FIXED: Removed extra parentheses
+        ''', data)  # ✅ FIXED: Removed extra parentheses and session_id
          
         conn.commit()
         cur.close()
@@ -217,26 +171,50 @@ def get_receipt_by_transaction_id(transaction_id):
         return None
 
 # User Management Functions
-def register_user(username, email, password, esignature, signature_image_data=None):
+def register_user(username, email, password, esignature):
     """Register a new user"""
     try:
         conn = psycopg2.connect(**DATABASE_CONFIG)
         cur = conn.cursor()
         
+        cur.execute('''
+            INSERT INTO users (username, email, password, esignature)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+        ''', (username, email, password, esignature))
+        
+        user_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ User {username} registered successfully with ID: {user_id}")
+        return user_id
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to register user {username}: {e}")
+        return None
+
+def register_user_with_signature(username, email, password, esignature, signature_image_data=None):
+    """Register a new user with optional signature image"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
         if signature_image_data:
-            # Store both text placeholder and image data
+            # Insert with signature image
             cur.execute('''
-                INSERT INTO users (username, email, password, esignature, signature_image, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id;
-            ''', (username, email, password, esignature, psycopg2.Binary(signature_image_data), 'pending'))
-        else:
-            # Store only text signature
-            cur.execute('''
-                INSERT INTO users (username, email, password, esignature, status)
+                INSERT INTO users (username, email, password, esignature, signature_image)
                 VALUES (%s, %s, %s, %s, %s)
                 RETURNING id;
-            ''', (username, email, password, esignature, 'pending'))
+            ''', (username, email, password, esignature, signature_image_data))
+        else:
+            # Insert without signature image
+            cur.execute('''
+                INSERT INTO users (username, email, password, esignature)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id;
+            ''', (username, email, password, esignature))
         
         user_id = cur.fetchone()[0]
         conn.commit()
@@ -257,7 +235,7 @@ def get_user_by_email(email):
         cur = conn.cursor()
         
         cur.execute('''
-            SELECT id, username, email, password, esignature, signature_image, status
+            SELECT id, username, email, password, esignature, signature_image
             FROM users
             WHERE email = %s;
         ''', (email,))
@@ -273,8 +251,7 @@ def get_user_by_email(email):
                 'email': row[2],
                 'password': row[3],
                 'esignature': row[4],
-                'signature_image': row[5],
-                'status': row[6]
+                'signature_image': row[5]
             }
         else:
             return None
@@ -290,7 +267,7 @@ def get_user_by_username(username):
         cur = conn.cursor()
         
         cur.execute('''
-            SELECT id, username, email, password, esignature, signature_image, status
+            SELECT id, username, email, password, esignature, signature_image
             FROM users
             WHERE username = %s;
         ''', (username,))
@@ -306,167 +283,11 @@ def get_user_by_username(username):
                 'email': row[2],
                 'password': row[3],
                 'esignature': row[4],
-                'signature_image': row[5],
-                'status': row[6]
+                'signature_image': row[5]
             }
         else:
             return None
             
     except Exception as e:
         logging.error(f"❌ Failed to get user by username {username}: {e}")
-        return None
-
-def get_pending_users():
-    """Get all users with pending status"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        cur.execute('''
-            SELECT id, username, email, esignature, created_at
-            FROM users
-            WHERE status = 'pending'
-            ORDER BY created_at DESC;
-        ''')
-        
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        users = []
-        for row in rows:
-            users.append({
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'esignature': row[3],
-                'created_at': row[4]
-            })
-            
-        return users
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to get pending users: {e}")
-        return []
-
-def get_accepted_users():
-    """Get all users with accepted status"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        cur.execute('''
-            SELECT id, username, email, esignature, created_at
-            FROM users
-            WHERE status = 'accepted'
-            ORDER BY created_at DESC;
-        ''')
-        
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        users = []
-        for row in rows:
-            users.append({
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'esignature': row[3],
-                'created_at': row[4]
-            })
-            
-        return users
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to get accepted users: {e}")
-        return []
-
-def get_rejected_users():
-    """Get all users with rejected status"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        cur.execute('''
-            SELECT id, username, email, esignature, created_at
-            FROM users
-            WHERE status = 'rejected'
-            ORDER BY created_at DESC;
-        ''')
-        
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-        
-        users = []
-        for row in rows:
-            users.append({
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'esignature': row[3],
-                'created_at': row[4]
-            })
-            
-        return users
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to get rejected users: {e}")
-        return []
-
-def update_user_status(user_id, status):
-    """Update user status to accepted or rejected"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        cur.execute('''
-            UPDATE users
-            SET status = %s
-            WHERE id = %s;
-        ''', (status, user_id))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        logging.info(f"✅ User {user_id} status updated to {status}")
-        return True
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to update user {user_id} status: {e}")
-        return False
-
-def get_user_by_id(user_id):
-    """Get user by ID"""
-    try:
-        conn = psycopg2.connect(**DATABASE_CONFIG)
-        cur = conn.cursor()
-        
-        cur.execute('''
-            SELECT id, username, email, password, esignature, signature_image, status
-            FROM users
-            WHERE id = %s;
-        ''', (user_id,))
-        
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
-        
-        if row:
-            return {
-                'id': row[0],
-                'username': row[1],
-                'email': row[2],
-                'password': row[3],
-                'esignature': row[4],
-                'signature_image': row[5],
-                'status': row[6]
-            }
-        else:
-            return None
-            
-    except Exception as e:
-        logging.error(f"❌ Failed to get user by ID {user_id}: {e}")
         return None
