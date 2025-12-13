@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Payment Voucher System</title>
+    <title>Admin Login - Payment Voucher System</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -89,18 +89,12 @@
             margin-bottom: 15px;
             font-weight: bold;
         }
-        .info-message {
-            color: #007bff;
-            text-align: center;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
-        <h2>Login to Payment Voucher System</h2>
+        <h2>Admin Login</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -116,10 +110,7 @@
         {% if success %}
         <div class="success-message">{{ success }}</div>
         {% endif %}
-        {% if transaction_id %}
-        <div class="info-message">Please login to access the voucher</div>
-        {% endif %}
-        <form action="/login{% if transaction_id %}?transaction_id={{ transaction_id }}{% if voucher_type %}&type={{ voucher_type }}{% endif %}{% endif %}" method="POST">
+        <form action="/admin/login" method="POST">
             <div class="form-group">
                 <label for="email">Email ID:</label>
                 <input type="email" id="email" name="email" required>
@@ -128,10 +119,10 @@
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn">Login as Admin</button>
         </form>
         <div class="signup-link">
-            Don't have an account? <a href="/signup{% if transaction_id %}?transaction_id={{ transaction_id }}{% if voucher_type %}&type={{ voucher_type }}{% endif %}{% endif %}">Sign Up</a>
+            Don't have an admin account? <a href="/admin/signup">Register</a>
         </div>
     </div>
 </body>

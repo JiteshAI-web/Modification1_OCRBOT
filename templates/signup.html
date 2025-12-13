@@ -176,6 +176,15 @@
     <div class="signup-container">
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
         <h2>Create Account</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="error-message{% if category == 'success' %}" style="color: green;"{% elif category == 'warning' %}" style="color: orange;"{% else %}"{% endif %}>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
         {% if error %}
         <div class="error-message">{{ error }}</div>
         {% endif %}

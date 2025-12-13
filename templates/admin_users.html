@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            height: 100vh;
+            position: fixed;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar-header h2 {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu li {
+            padding: 15px 20px;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar-menu li:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+        }
+        
+        .sidebar-menu li a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            padding: 8px 12px;
+            border-radius: 5px;
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin: 0;
+        }
+        
+        .logout-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background-color: #c82333;
+            color: white;
+        }
+        
+        .section-title {
+            margin: 30px 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .users-table {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .signature-preview {
+            max-width: 100px;
+            max-height: 50px;
+            display: block;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .accept-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .accept-btn:hover {
+            background-color: #218838;
+        }
+        
+        .reject-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .reject-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-accepted {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-rejected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .no-users {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(200%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background-color: #28a745;
+        }
+        
+        .notification.error {
+            background-color: #dc3545;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            
+            .main-content {
+                margin-left: 200px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            th, td {
+                padding: 10px 5px;
+                font-size: 0.9em;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .accept-btn, .reject-btn {
+                padding: 6px 12px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2><img src="/static/logo.png" alt="Company Logo" style="max-width: 100%; height: auto;"></h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="/admin/dashboard">Dashboard</a></li>
+            <li><a href="/admin/users">User Management</a></li>
+            <li><a href="/admin/emails">Email List</a></li>
+        </ul>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <header>
+                <h1>User Management</h1>
+                <a href="/admin/logout" class="logout-btn">Logout</a>
+            </header>
+            
+            <h2 class="section-title" id="pending">Pending Users</h2>
+            <div class="users-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Signature</th>
+                            <th>Created At</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if pending_users %}
+                            {% for user in pending_users %}
+                            <tr id="user-row-{{ user.id }}" data-user-id="{{ user.id }}">
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.esignature == '[Drawn Signature]' %}
+                                        <em>Drawn Signature</em>
+                                    {% else %}
+                                        {{ user.esignature }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'N/A' }}</td>
+                                <td><span class="status-badge status-pending">Pending</span></td>
+                                <td class="action-buttons">
+                                    <button class="accept-btn" data-action="accept">✓ Accept</button>
+                                    <button class="reject-btn" data-action="reject">✗ Reject</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="no-users">
+                                    No pending users found.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <h2 class="section-title" id="accepted">Accepted Users</h2>
+            <div class="users-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Signature</th>
+                            <th>Created At</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if accepted_users %}
+                            {% for user in accepted_users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.esignature == '[Drawn Signature]' %}
+                                        <em>Drawn Signature</em>
+                                    {% else %}
+                                        {{ user.esignature }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'N/A' }}</td>
+                                <td><span class="status-badge status-accepted">Accepted</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="no-users">
+                                    No accepted users found.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <h2 class="section-title" id="rejected">Rejected Users</h2>
+            <div class="users-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Signature</th>
+                            <th>Created At</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if rejected_users %}
+                            {% for user in rejected_users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.esignature == '[Drawn Signature]' %}
+                                        <em>Drawn Signature</em>
+                                    {% else %}
+                                        {{ user.esignature }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at else 'N/A' }}</td>
+                                <td><span class="status-badge status-rejected">Rejected</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="no-users">
+                                    No rejected users found.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <script>
+        // Highlight active nav item based on current page
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPage = window.location.pathname;
+            const navLinks = document.querySelectorAll('.sidebar-menu a');
+            
+            navLinks.forEach(link => {
+                // Reset all items
+                link.style.backgroundColor = '';
+                link.style.color = 'white';
+                link.style.fontWeight = 'normal';
+                
+                // Highlight active item
+                if ((currentPage === '/admin/dashboard' && link.getAttribute('href') === '/admin/dashboard') || 
+                    (currentPage === '/admin/users' && link.getAttribute('href') === '/admin/users') ||
+                    (currentPage === '/admin/emails' && link.getAttribute('href') === '/admin/emails')) {
+                    link.style.backgroundColor = '#007bff';
+                    link.style.color = 'white';
+                    link.style.fontWeight = 'bold';
+                }
+            });
+        });
+        
+        function showNotification(message, isSuccess) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + (isSuccess ? 'success' : 'error');
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        async function approveUser(userId) {
+            try {
+                const response = await fetch(`/admin/approve_user/${userId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('User approved successfully!', true);
+                    // Remove the row from the table
+                    const row = document.getElementById(`user-row-${userId}`);
+                    if (row) {
+                        row.style.backgroundColor = '#d4edda';
+                        setTimeout(() => {
+                            row.remove();
+                        }, 1000);
+                    }
+                } else {
+                    showNotification('Failed to approve user: ' + result.message, false);
+                }
+            } catch (error) {
+                showNotification('Error approving user: ' + error.message, false);
+            }
+        }
+        
+        async function rejectUser(userId) {
+            if (!confirm('Are you sure you want to reject this user?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/reject_user/${userId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('User rejected successfully!', true);
+                    // Remove the row from the table
+                    const row = document.getElementById(`user-row-${userId}`);
+                    if (row) {
+                        row.style.backgroundColor = '#f8d7da';
+                        setTimeout(() => {
+                            row.remove();
+                        }, 1000);
+                    }
+                } else {
+                    showNotification('Failed to reject user: ' + result.message, false);
+                }
+            } catch (error) {
+                showNotification('Error rejecting user: ' + error.message, false);
+            }
+        }
+        
+        // Add event listeners to buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.action-buttons button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const row = this.closest('tr');
+                    const userId = row.getAttribute('data-user-id');
+                    const action = this.getAttribute('data-action');
+                    
+                    if (action === 'accept') {
+                        approveUser(userId);
+                    } else if (action === 'reject') {
+                        rejectUser(userId);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

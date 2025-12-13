@@ -74,6 +74,30 @@ def init_db():
             );
         ''')
         
+        # Table 4: admins - New table for admin users
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS admins (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                company_name VARCHAR(100),
+                role VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        
+        # Table 5: email - New table for email management
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS email (
+                id SERIAL PRIMARY KEY,
+                email_address VARCHAR(255) UNIQUE NOT NULL,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+        
         # Check and add status column if it doesn't exist
         cur.execute("""
             SELECT column_name 
@@ -217,37 +241,49 @@ def get_receipt_by_transaction_id(transaction_id):
         return None
 
 # User Management Functions
-def register_user(username, email, password, esignature, signature_image_data=None):
-    """Register a new user"""
+def register_user(username, email, password, esignature, signature_image=None, status="pending"):
+    """
+    Register a new user with optional signature image and status
+    
+    Args:
+        username (str): Username
+        email (str): Email address
+        password (str): Hashed password
+        esignature (str): Processed signature text (placeholder for drawn signatures)
+        signature_image (bytes, optional): Actual signature image data
+        status (str): User status ('pending', 'accepted', 'rejected')
+    
+    Returns:
+        int: User ID if successful, None if failed
+    """
     try:
         conn = psycopg2.connect(**DATABASE_CONFIG)
         cur = conn.cursor()
         
-        if signature_image_data:
-            # Store both text placeholder and image data
+        # Insert user with signature image if provided
+        if signature_image:
             cur.execute('''
                 INSERT INTO users (username, email, password, esignature, signature_image, status)
                 VALUES (%s, %s, %s, %s, %s, %s)
                 RETURNING id;
-            ''', (username, email, password, esignature, psycopg2.Binary(signature_image_data), 'pending'))
+            ''', (username, email, password, esignature, signature_image, status))
         else:
-            # Store only text signature
             cur.execute('''
                 INSERT INTO users (username, email, password, esignature, status)
                 VALUES (%s, %s, %s, %s, %s)
                 RETURNING id;
-            ''', (username, email, password, esignature, 'pending'))
+            ''', (username, email, password, esignature, status))
         
         user_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
         conn.close()
         
-        logging.info(f"✅ User {username} registered successfully with ID: {user_id}")
+        logging.info(f"✅ User {username} ({email}) registered successfully with ID: {user_id} and status: {status}")
         return user_id
         
     except Exception as e:
-        logging.error(f"❌ Failed to register user {username}: {e}")
+        logging.error(f"❌ Failed to register user {username} ({email}): {e}")
         return None
 
 def get_user_by_email(email):
@@ -470,3 +506,181 @@ def get_user_by_id(user_id):
     except Exception as e:
         logging.error(f"❌ Failed to get user by ID {user_id}: {e}")
         return None
+
+def register_admin(username, email, password, company_name, role):
+    """Register a new admin user"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            INSERT INTO admins (username, email, password, company_name, role)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+        ''', (username, email, password, company_name, role))
+        
+        admin_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ Admin {username} registered successfully with ID: {admin_id}")
+        return admin_id
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to register admin {username}: {e}")
+        return None
+
+def get_admin_by_email(email):
+    """Get admin by email"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            SELECT id, username, email, password, company_name, role
+            FROM admins
+            WHERE email = %s;
+        ''', (email,))
+        
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row:
+            return {
+                'id': row[0],
+                'username': row[1],
+                'email': row[2],
+                'password': row[3],
+                'company_name': row[4],
+                'role': row[5]
+            }
+        else:
+            return None
+            
+    except Exception as e:
+        logging.error(f"❌ Failed to get admin by email {email}: {e}")
+        return None
+
+def add_email(email_address, description=""):
+    """Add a new email to the email list"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            INSERT INTO email (email_address, description)
+            VALUES (%s, %s)
+            RETURNING id;
+        ''', (email_address, description))
+        
+        email_id = cur.fetchone()[0]
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ Email {email_address} added successfully with ID: {email_id}")
+        return email_id
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to add email {email_address}: {e}")
+        return None
+
+def get_all_emails():
+    """Get all emails from the email list"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            SELECT id, email_address, description, created_at, updated_at
+            FROM email
+            ORDER BY created_at DESC;
+        ''')
+        
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        emails = []
+        for row in rows:
+            emails.append({
+                'id': row[0],
+                'email_address': row[1],
+                'description': row[2],
+                'created_at': row[3],
+                'updated_at': row[4]
+            })
+            
+        return emails
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to get emails: {e}")
+        return []
+
+def update_email(email_id, email_address, description=""):
+    """Update an existing email in the email list"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            UPDATE email
+            SET email_address = %s, description = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s;
+        ''', (email_address, description, email_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ Email ID {email_id} updated successfully")
+        return True
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to update email ID {email_id}: {e}")
+        return False
+
+def delete_email(email_id):
+    """Delete an email from the email list"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            DELETE FROM email
+            WHERE id = %s;
+        ''', (email_id,))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ Email ID {email_id} deleted successfully")
+        return True
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to delete email ID {email_id}: {e}")
+        return False
+
+def email_exists_in_list(email_address):
+    """Check if an email exists in the email list"""
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        cur.execute('''
+            SELECT COUNT(*) FROM email
+            WHERE email_address = %s;
+        ''', (email_address,))
+        
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        
+        return count > 0
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to check email existence {email_address}: {e}")
+        return False

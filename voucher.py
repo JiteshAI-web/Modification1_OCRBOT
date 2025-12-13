@@ -1,23 +1,26 @@
 import os
-import logging
+import json
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+import pytz
+import bcrypt
+import logging  # Standard library logging
 import psycopg2
 import base64
 import uuid
-from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session, send_file, get_flashed_messages
+from flask import flash as flask_flash  # Import flash with alias to avoid conflicts
 from flask_session import Session
 from datetime import datetime, timedelta
 from io import BytesIO
 from email.message import EmailMessage
 import smtplib
-import requests
-from apscheduler.schedulers.background import BackgroundScheduler
-import pytz
 
 # Shared storage for session data
 voucher_data = {}
 
 # Import user management functions
-from database import init_db, register_user, get_user_by_email, get_user_by_username, get_pending_users, update_user_status, get_user_by_id, get_accepted_users, get_rejected_users
+from database import init_db, register_user, get_user_by_email, get_user_by_username, get_pending_users, update_user_status, get_user_by_id, get_accepted_users, get_rejected_users, register_admin, get_admin_by_email, add_email, get_all_emails, update_email, delete_email, email_exists_in_list
 
 # Flask app
 voucher_app = Flask(__name__)
@@ -242,108 +245,139 @@ def signup():
     transaction_id = request.args.get('transaction_id')
     voucher_type = request.args.get('type', '')
     
-    if request.method == 'POST':
-        username = request.form['username']
-        email = request.form['email']
-        password = request.form['password']
-        confirm_password = request.form['confirm_password']
-        esignature = request.form['esignature']
-        
-        # Handle signature data - could be base64 image or plain text
-        signature_image_data = None
-        if esignature.startswith('data:image/') and ';base64,' in esignature:
-            # It's a base64 image, extract the image data
-            try:
-                # Extract base64 data from data URL
-                header, encoded = esignature.split(',', 1)
-                signature_image_data = base64.b64decode(encoded)
-                # Use placeholder text for display
-                processed_signature = "[Drawn Signature]"
-            except Exception as e:
-                logging.error(f"Error decoding signature image: {e}")
-                processed_signature = "[Drawn Signature]"  # Fallback
-        else:
-            # It's plain text, use as-is
-            processed_signature = esignature
-        
-        # Check if passwords match
-        if password != confirm_password:
-            return render_template('signup.html', error="Passwords do not match", transaction_id=transaction_id, voucher_type=voucher_type)
-        
-        # Check if user already exists by EMAIL ONLY (allow duplicate usernames)
-        if get_user_by_email(email):
-            return render_template('signup.html', error="Email already registered", transaction_id=transaction_id, voucher_type=voucher_type)
-        
-        # Register user (without checking for duplicate username)
-        # Pass both the processed signature text and the signature image data
-        user_id = register_user(username, email, password, processed_signature, signature_image_data)  # In production, hash the password
-        if user_id:
-            # Show pending approval message instead of auto-login
-            return render_template('signup.html', success="Registration successful! Your request is pending administrator authorization. Please wait for approval before logging in.", transaction_id=transaction_id, voucher_type=voucher_type)
-        else:
-            return render_template('signup.html', error="Registration failed. Please try again.", transaction_id=transaction_id, voucher_type=voucher_type)
+    if request.method == "POST":
+        try:
+            # Get form data
+            username = request.form.get("username")
+            email = request.form.get("email")
+            password = request.form.get("password")
+            confirm_password = request.form.get("confirm_password")
+            esignature = request.form.get("esignature")
+            
+            # Handle signature data - could be base64 image or plain text
+            signature_image_data = None
+            if esignature and esignature.startswith('data:image/') and ';base64,' in esignature:
+                # It's a base64 image, extract the image data
+                try:
+                    # Extract base64 data from data URL
+                    header, encoded = esignature.split(',', 1)
+                    signature_image_data = base64.b64decode(encoded)
+                    # Use placeholder text for display
+                    processed_signature = "[Drawn Signature]"
+                except Exception as e:
+                    logging.error(f"Error decoding signature image: {e}")
+                    processed_signature = "[Drawn Signature]"  # Fallback
+            else:
+                # It's plain text, use as-is
+                processed_signature = esignature
+            
+            # Validate required fields
+            if not all([username, email, password, confirm_password]):
+                flask_flash("All fields are required!", "error")
+                return render_template("signup.html", transaction_id=transaction_id, voucher_type=voucher_type)
+            
+            # Check if passwords match
+            if password != confirm_password:
+                flask_flash("Passwords do not match!", "error")
+                return render_template("signup.html", transaction_id=transaction_id, voucher_type=voucher_type)
+            
+            # Check if user already exists
+            if get_user_by_email(email) or get_user_by_username(username):
+                flask_flash("User already exists with this email or username!", "error")
+                return render_template("signup.html", transaction_id=transaction_id, voucher_type=voucher_type)
+            
+            # Hash the password
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            # Check if email exists in email list
+            if email_exists_in_list(email):
+                # Auto-accept user if email is in the list
+                status = "accepted"
+                flash_message = "Signup successful! Your account has been automatically approved."
+                flash_category = "success"
+            else:
+                # Put user in pending status if email is not in the list
+                status = "pending"
+                flash_message = "This mail is not authorized by compny so contact to Admin"
+                flash_category = "error"
+            
+            # Register the user with the determined status
+            user_id = register_user(username, email, hashed_password, processed_signature, signature_image_data, status)
+            
+            if user_id:
+                flask_flash(flash_message, flash_category)
+                if status == "accepted":
+                    # For accepted users, show success message and redirect to login
+                    # They will be able to access voucher page after login
+                    return redirect(url_for("login"))
+                else:
+                    # For pending users, redirect to login page
+                    return redirect(url_for("login"))
+            else:
+                flask_flash("Registration failed. Please try again.", "error")
+                return render_template("signup.html", transaction_id=transaction_id, voucher_type=voucher_type)
+                
+        except Exception as e:
+            logging.error(f"❌ Registration error: {e}")
+            flask_flash("An error occurred during registration. Please try again.", "error")
+            return render_template("signup.html", transaction_id=transaction_id, voucher_type=voucher_type)
     
     # Pass through transaction parameters to signup form
     return render_template('signup.html', transaction_id=transaction_id, voucher_type=voucher_type)
 
 @voucher_app.route("/login", methods=["GET", "POST"])
 def login():
-    # Get transaction_id and type from URL parameters to pass through after login
-    transaction_id = request.args.get('transaction_id')
-    voucher_type = request.args.get('type', '')
-    success_msg = request.args.get('success', '')  # Get success message if present
-    
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
         
         user = get_user_by_email(email)
-        if user:
-            # User exists, check password
-            if user['password'] == password:  # In production, use proper password hashing
-                # Check if user is approved
-                user_status = user.get('status', 'pending')
-                if user_status != 'accepted':
-                    return render_template('login.html', error=f"Your account is pending approval. Current status: {user_status}. Please contact administrator.", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
-                
+        if user and bcrypt.checkpw(password.encode('utf-8'), user['password'].encode('utf-8')):
+            # Check user status
+            if user['status'] == 'accepted':
                 session['user_id'] = user['id']
                 session['username'] = user['username']
-                session['user_esignature'] = user['esignature']
-                # Store signature image data in session if it exists
-                if user.get('signature_image'):
-                    # Convert signature image to base64 if it exists
-                    signature_image_base64 = 'data:image/png;base64,' + base64.b64encode(user['signature_image']).decode('utf-8')
-                    session['user_signature_image'] = signature_image_base64
+                session['email'] = user['email']
                 
-                # After login, redirect to display voucher page with original parameters
-                # Store transaction info in session temporarily
+                # Get transaction parameters if they exist in the session or URL
+                transaction_id = request.args.get('transaction_id') or session.get('transaction_id')
+                voucher_type = request.args.get('type') or session.get('voucher_type')
+                
+                # Clear transaction parameters from session
+                session.pop('transaction_id', None)
+                session.pop('voucher_type', None)
+                
+                # Redirect to voucher page with parameters if they exist
                 if transaction_id and voucher_type:
-                    session['temp_transaction_id'] = transaction_id
-                    session['temp_voucher_type'] = voucher_type
-                    return redirect(url_for('display_voucher'))
+                    return redirect(url_for("display_voucher", transaction_id=transaction_id, type=voucher_type))
                 else:
-                    return redirect(url_for('display_voucher'))
-            else:
-                return render_template('login.html', error="Invalid password", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
+                    return redirect(url_for("display_voucher"))
+            elif user['status'] == 'pending':
+                flask_flash("Your account is pending administrator authorization. Please wait for approval before logging in.", "warning")
+                return render_template("login.html")
+            elif user['status'] == 'rejected':
+                flask_flash("Your account has been rejected by the administrator.", "error")
+                return render_template("login.html")
         else:
-            return render_template('login.html', error="User not found", transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
+            # Check if email exists in email list
+            if email_exists_in_list(email):
+                # Email is in the list but credentials are wrong
+                flask_flash("Invalid email or password!", "error")
+            else:
+                # Email is not in the approved list
+                flask_flash("This email is not authorized by the company. Please contact the administrator.", "error")
+            return render_template("login.html")
     
-    # Pass through transaction parameters to login form
-    return render_template('login.html', transaction_id=transaction_id, voucher_type=voucher_type, success=success_msg)
+    # Store transaction parameters in session if they exist in URL
+    transaction_id = request.args.get('transaction_id')
+    voucher_type = request.args.get('type')
+    if transaction_id and voucher_type:
+        session['transaction_id'] = transaction_id
+        session['voucher_type'] = voucher_type
+    
+    return render_template("login.html")
 
 # Admin Dashboard Routes
-@voucher_app.route("/admin/dashboard")
-def admin_dashboard():
-    # Simple admin check - in production, implement proper authentication
-    # For now, we'll protect this with a simple check or environment variable
-    pending_users = get_pending_users()
-    accepted_users = get_accepted_users()
-    rejected_users = get_rejected_users()
-    return render_template('admin_dashboard.html', 
-                         pending_users=pending_users,
-                         accepted_users=accepted_users,
-                         rejected_users=rejected_users)
-
 @voucher_app.route("/admin/approve_user/<int:user_id>")
 def approve_user(user_id):
     # Simple admin check - in production, implement proper authentication
@@ -359,6 +393,156 @@ def reject_user(user_id):
         return jsonify({'success': True, 'message': 'User rejected successfully'})
     else:
         return jsonify({'success': False, 'message': 'Failed to reject user'}), 500
+
+# Admin Authentication Routes
+@voucher_app.route("/admin/signup", methods=["GET", "POST"])
+def admin_signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        company_name = request.form['company_name']
+        role = request.form['role']
+        
+        # Validate passwords match
+        if password != confirm_password:
+            return render_template('admin_signup.html', error="Passwords do not match")
+        
+        # Register admin
+        admin_id = register_admin(username, email, password, company_name, role)
+        if admin_id:
+            return render_template('admin_signup.html', success="Admin registered successfully! You can now login.")
+        else:
+            return render_template('admin_signup.html', error="Registration failed. Please try again.")
+    
+    return render_template('admin_signup.html')
+
+@voucher_app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        admin = get_admin_by_email(email)
+        if admin and admin['password'] == password:  # In production, use proper password hashing
+            session['admin_id'] = admin['id']
+            session['admin_username'] = admin['username']
+            session['admin_company'] = admin['company_name']
+            session['admin_role'] = admin['role']
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return render_template('admin_login.html', error="Invalid credentials")
+    
+    return render_template('admin_login.html')
+
+@voucher_app.route("/admin/logout")
+def admin_logout():
+    session.clear()
+    return redirect(url_for('admin_login'))
+
+# Email Management Routes
+@voucher_app.route("/admin/emails")
+def email_management():
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+        
+    # Get all emails
+    emails = get_all_emails()
+    return render_template('email_management.html', emails=emails)
+
+@voucher_app.route("/admin/emails/add", methods=["POST"])
+def add_email_route():
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        
+    try:
+        data = request.get_json()
+        email_address = data.get('email_address')
+        description = data.get('description', '')
+        
+        if not email_address:
+            return jsonify({'success': False, 'message': 'Email address is required'}), 400
+            
+        email_id = add_email(email_address, description)
+        if email_id:
+            return jsonify({'success': True, 'message': 'Email added successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to add email'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@voucher_app.route("/admin/emails/update/<int:email_id>", methods=["PUT"])
+def update_email_route(email_id):
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        
+    try:
+        data = request.get_json()
+        email_address = data.get('email_address')
+        description = data.get('description', '')
+        
+        if not email_address:
+            return jsonify({'success': False, 'message': 'Email address is required'}), 400
+            
+        success = update_email(email_id, email_address, description)
+        if success:
+            return jsonify({'success': True, 'message': 'Email updated successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to update email'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@voucher_app.route("/admin/emails/delete/<int:email_id>", methods=["DELETE"])
+def delete_email_route(email_id):
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 401
+        
+    try:
+        success = delete_email(email_id)
+        if success:
+            return jsonify({'success': True, 'message': 'Email deleted successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to delete email'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# Protect admin dashboard route
+@voucher_app.route("/admin/dashboard")
+def admin_dashboard():
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get user statistics
+    pending_users = get_pending_users()
+    accepted_users = get_accepted_users()
+    rejected_users = get_rejected_users()
+    
+    return render_template('admin_dashboard.html', 
+                         pending_users=pending_users,
+                         accepted_users=accepted_users,
+                         rejected_users=rejected_users)
+
+@voucher_app.route("/admin/users")
+def admin_user_management():
+    # Check if admin is authenticated
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get all users
+    pending_users = get_pending_users()
+    accepted_users = get_accepted_users()
+    rejected_users = get_rejected_users()
+    
+    return render_template('admin_users.html', 
+                         pending_users=pending_users,
+                         accepted_users=accepted_users,
+                         rejected_users=rejected_users)
 
 @voucher_app.route("/display_voucher", methods=["GET"])
 def display_voucher():
