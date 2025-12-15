@@ -1039,22 +1039,22 @@
                         imageLink.click();
                         imageLink.remove();
 
-                        savePDF(result.record_id, () => {
-                            if (voucherType === 'gstbill') {
-                                alert("✅ GST Bill voucher and PDF downloaded!");
-                            } else {
-                                alert("✅ Voucher saved and PDF downloaded!");
+                        savePDF(result.record_id, (pdfResult) => {
+                            // PDF download and email sending are handled in savePDF function
+                            // No need to show additional alerts here
+                            if (!pdfResult) {
+                                console.log("PDF generation may have failed");
                             }
                         });
                     })
                     .catch(imgErr => {
                         console.error(imgErr);
                         alert("⚠️ Voucher saved, but image fetch failed.");
-                        savePDF(result.record_id, () => {
-                            if (voucherType === 'gstbill') {
-                                alert("✅ GST Bill PDF downloaded!");
-                            } else {
-                                alert("✅ Voucher saved and PDF downloaded!");
+                        savePDF(result.record_id, (pdfResult) => {
+                            // PDF download and email sending are handled in savePDF function
+                            // No need to show additional alerts here
+                            if (!pdfResult) {
+                                console.log("PDF generation may have failed");
                             }
                         });
                     });

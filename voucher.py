@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from email.message import EmailMessage
 import smtplib
+from PyPDF2 import PdfReader, PdfWriter
 
 # Shared storage for session data
 voucher_data = {}
@@ -61,6 +62,7 @@ def init_db():
                 procured_from TEXT,
                 location TEXT,
                 additional_receipt BYTEA,
+                additional_receipt2 BYTEA,
                 receiver_signature TEXT,
                 signature_image BYTEA,
                 image BYTEA,
@@ -96,6 +98,20 @@ def init_db():
                 ADD COLUMN signature_image BYTEA;
             ''')
             logging.info("✅ Added signature_image column to brochure table")
+            
+        # ⭐ NEW: Check and add additional_receipt2 column if it doesn't exist
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='brochure' AND column_name='additional_receipt2';
+        """)
+        
+        if not cur.fetchone():
+            cur.execute('''
+                ALTER TABLE brochure 
+                ADD COLUMN additional_receipt2 BYTEA;
+            ''')
+            logging.info("✅ Added additional_receipt2 column to brochure table")
         
         conn.commit()
         cur.close()
@@ -672,15 +688,11 @@ def save_voucher():
         location_lat = data.get('location_lat', '')
         location_lng = data.get('location_lng', '')
         
-        # Convert to float or None
-        try:
-            lat = float(location_lat) if location_lat else None
-            lng = float(location_lng) if location_lng else None
-        except (ValueError, TypeError):
-            lat = None
-            lng = None
+        # Convert string coordinates to float if they exist
+        lat = float(location_lat) if location_lat else None
+        lng = float(location_lng) if location_lng else None
 
-        # Get user's signature image from the users table
+        # ⭐ NEW: Get user's signature image from database if available
         signature_image_data = None
         if 'user_id' in session:
             try:
@@ -703,12 +715,42 @@ def save_voucher():
         cur = conn.cursor()
         
         # ⭐ CHANGED: Updated INSERT statement with location_lat and location_lng and signature_image
+        # Also added logic to extract last page of PDF if it's a GST bill
+        last_page_pdf_bytes = None
+        if additional_receipt and data.get('voucher_type') == 'gstbill':
+            try:
+                # Read the uploaded PDF
+                pdf_bytes = additional_receipt.read()
+                additional_receipt.seek(0)  # Reset file pointer for database storage
+                
+                # Extract the last page of the PDF
+                from PyPDF2 import PdfReader, PdfWriter
+                from io import BytesIO
+                
+                # Create a PDF reader object
+                pdf_reader = PdfReader(BytesIO(pdf_bytes))
+                
+                # Get the last page
+                if len(pdf_reader.pages) > 0:
+                    # Create a PDF writer object for the last page
+                    pdf_writer = PdfWriter()
+                    last_page = pdf_reader.pages[-1]  # Get the last page
+                    pdf_writer.add_page(last_page)
+                    
+                    # Write the last page to bytes
+                    last_page_buffer = BytesIO()
+                    pdf_writer.write(last_page_buffer)
+                    last_page_pdf_bytes = last_page_buffer.getvalue()
+            except Exception as e:
+                logging.error(f"❌ Error extracting last page from PDF: {e}")
+                # If we can't extract the last page, we'll just store None
+
         cur.execute('''
             INSERT INTO brochure (
                 slno, date, account_name, debit, credit, amount, time,
                 reason, procured_from, location, location_lat, location_lng,
-                additional_receipt, receiver_signature, signature_image, image
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                additional_receipt, additional_receipt2, receiver_signature, signature_image, image
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id;
         ''', (
             data['slno'],
@@ -724,6 +766,7 @@ def save_voucher():
             lat,               # ⭐ NEW: Add latitude
             lng,               # ⭐ NEW: Add longitude
             additional_receipt.read() if additional_receipt else None,
+            last_page_pdf_bytes,  # Store the last page of the PDF for GST bills
             data['receiver_signature'],
             signature_image_data,  # Add signature image data
             psycopg2.Binary(image_bytes)
@@ -811,6 +854,25 @@ def get_uploaded_pdf(record_id):
         logging.error(f"❌ Error retrieving PDF: {e}")
         return "Server error", 500
 
+# New route to fetch the last page of the uploaded PDF
+@voucher_app.route('/get_last_page_pdf/<int:record_id>')
+def get_last_page_pdf(record_id):
+    try:
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        cur.execute('SELECT additional_receipt2 FROM brochure WHERE id = %s', (record_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        if row and row[0]:
+            return send_file(BytesIO(row[0]), mimetype='application/pdf', as_attachment=False)
+        else:
+            return "No last page PDF found", 404
+    except Exception as e:
+        logging.error(f"❌ Error retrieving last page PDF: {e}")
+        return "Server error", 500
+
 @voucher_app.route('/send_pdf_email', methods=['POST'])
 def send_pdf_email():
     try:
@@ -880,6 +942,161 @@ def get_location(record_id):
     except Exception as e:
         logging.error(f"❌ Error retrieving location: {e}")
         return jsonify({"error": "Server error"}), 500
+
+@voucher_app.route('/upload_generated_pdf', methods=['POST'])
+def upload_generated_pdf():
+    try:
+        data = request.get_json()
+        pdf_base64 = data.get('pdfBase64')
+        record_id = data.get('recordId')
+        
+        if not pdf_base64 or not record_id:
+            return jsonify({'success': False, 'error': 'Missing PDF data or record ID'}), 400
+        
+        # Decode the base64 PDF
+        pdf_bytes = base64.b64decode(pdf_base64)
+        
+        # Extract the last page of the PDF
+        last_page_pdf_bytes = None
+        try:
+            # Create a PDF reader object
+            pdf_reader = PdfReader(BytesIO(pdf_bytes))
+            
+            # Get the last page
+            if len(pdf_reader.pages) > 0:
+                # Create a PDF writer object for the last page
+                pdf_writer = PdfWriter()
+                last_page = pdf_reader.pages[-1]  # Get the last page
+                pdf_writer.add_page(last_page)
+                
+                # Write the last page to bytes
+                last_page_buffer = BytesIO()
+                pdf_writer.write(last_page_buffer)
+                last_page_pdf_bytes = last_page_buffer.getvalue()
+        except Exception as e:
+            logging.error(f"❌ Error extracting last page from PDF: {e}")
+            # If we can't extract the last page, we'll just use the full PDF
+            last_page_pdf_bytes = pdf_bytes
+        
+        # Update the brochure table with the generated PDF
+        # For GST bills, we'll store the full PDF in additional_receipt
+        # and the last page in additional_receipt2 (if extraction was successful)
+        conn = psycopg2.connect(**DATABASE_CONFIG)
+        cur = conn.cursor()
+        
+        if last_page_pdf_bytes and last_page_pdf_bytes != pdf_bytes:
+            # We successfully extracted the last page, store both
+            cur.execute('''
+                UPDATE brochure 
+                SET additional_receipt = %s, additional_receipt2 = %s
+                WHERE id = %s
+            ''', (psycopg2.Binary(pdf_bytes), psycopg2.Binary(last_page_pdf_bytes), record_id))
+        else:
+            # Either extraction failed or resulted in the same PDF, store only the full PDF
+            cur.execute('''
+                UPDATE brochure 
+                SET additional_receipt = %s
+                WHERE id = %s
+            ''', (psycopg2.Binary(pdf_bytes), record_id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        logging.info(f"✅ Generated PDF uploaded for record ID: {record_id}")
+        return jsonify({'success': True, 'message': 'PDF uploaded successfully'})
+        
+    except Exception as e:
+        logging.error(f"❌ Error uploading generated PDF: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# New endpoint to modify PDF and attach voucher image
+@voucher_app.route('/modify_pdf_with_voucher', methods=['POST'])
+def modify_pdf_with_voucher():
+    try:
+        # Get the uploaded PDF file
+        uploaded_pdf = request.files.get('uploadedPdf')
+        voucher_image_data = request.form.get('voucherImage')
+        transaction_id = request.form.get('transactionId')
+        
+        if not uploaded_pdf or not voucher_image_data:
+            return jsonify({'success': False, 'error': 'Missing PDF or voucher image'}), 400
+        
+        # Read the uploaded PDF
+        pdf_bytes = uploaded_pdf.read()
+        
+        # Decode the voucher image (it's a data URL)
+        if voucher_image_data.startswith('data:image'):
+            header, encoded = voucher_image_data.split(',', 1)
+            voucher_image_bytes = base64.b64decode(encoded)
+        else:
+            voucher_image_bytes = base64.b64decode(voucher_image_data)
+        
+        # Modify the PDF to add the voucher image as the last page
+        from PyPDF2 import PdfReader, PdfWriter
+        from io import BytesIO
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import letter
+        import tempfile
+        import os
+        
+        # Create a PDF reader object
+        pdf_reader = PdfReader(BytesIO(pdf_bytes))
+        
+        # Create a PDF writer object
+        pdf_writer = PdfWriter()
+        
+        # Copy all existing pages
+        for page in pdf_reader.pages:
+            pdf_writer.add_page(page)
+        
+        # Create a new page with the voucher image
+        # Create a temporary PDF with the image
+        temp_pdf_buffer = BytesIO()
+        c = canvas.Canvas(temp_pdf_buffer, pagesize=letter)
+        width, height = letter
+        
+        # Add the voucher image to the new page
+        # Save voucher image to temporary file
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_img:
+            tmp_img.write(voucher_image_bytes)
+            tmp_img_path = tmp_img.name
+        
+        # Calculate image size to fit the page
+        img_width = width * 0.8
+        img_height = height * 0.8
+        img_x = (width - img_width) / 2
+        img_y = (height - img_height) / 2
+        
+        c.drawImage(tmp_img_path, img_x, img_y, width=img_width, height=img_height)
+        c.showPage()
+        c.save()
+        
+        # Clean up temporary image file
+        os.unlink(tmp_img_path)
+        
+        # Add the new page with voucher image to the PDF
+        temp_pdf_buffer.seek(0)
+        temp_pdf_reader = PdfReader(temp_pdf_buffer)
+        for page in temp_pdf_reader.pages:
+            pdf_writer.add_page(page)
+        
+        # Write the modified PDF to bytes
+        output_buffer = BytesIO()
+        pdf_writer.write(output_buffer)
+        modified_pdf_bytes = output_buffer.getvalue()
+        
+        # Return the modified PDF
+        return send_file(
+            BytesIO(modified_pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'GST_Bill_{transaction_id}_with_voucher.pdf'
+        )
+        
+    except Exception as e:
+        logging.error(f"❌ Error modifying PDF with voucher image: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # Run
 def run_voucher_app(host='0.0.0.0', port=5000, use_reloader=False):

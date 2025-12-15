@@ -434,41 +434,173 @@ async function savePDF(recordId, callback) {
         const safeName = fullName.replace(/\s+/g, '_');
         const fileName = `Justification_${safeName}_${Date.now()}.pdf`;
         console.log('Saving PDF as:', fileName);
-        doc.save(fileName);
-
+        
+        // Generate PDF as base64
         const pdfBase64 = doc.output('datauristring').split(',')[1];
         console.log('PDF base64 generated, length:', pdfBase64.length);
 
-        const recipients = [
-             "sethytrinatha25@gmail.com",
-            "sethytrinatha5@gmail.com",
-            "jiteshmohapatra2000@gmail.com"
-            
-        ];
-
-        fetch('/send_pdf_email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pdfBase64,
-                fileName,
-                recipients
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ Mail sent successfully!');
+        // For GST bill mode, we need to handle the voucher image attachment
+        if (isGstMode) {
+            // If there's an uploaded PDF, we'll modify it to include the voucher image
+            if (receiptInput.files.length > 0) {
+                const uploadedPdfFile = receiptInput.files[0];
+                
+                // Create FormData to send both the uploaded PDF and voucher image to server
+                const formData = new FormData();
+                formData.append('uploadedPdf', uploadedPdfFile);
+                formData.append('voucherImage', voucherImageBase64);
+                formData.append('recordId', recordId);
+                formData.append('transactionId', transactionId);
+                
+                // Send to server to modify the PDF and return it
+                const response = await fetch('/modify_pdf_with_voucher', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    
+                    // Download the modified PDF
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(blob);
+                    downloadLink.download = `GST_Bill_${transactionId}_with_voucher.pdf`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    downloadLink.remove();
+                    
+                    // Show message that PDF has been downloaded
+                    alert("✅ GST Bill PDF with voucher image downloaded!");
+                    
+                    // Convert blob to base64 for email
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        const modifiedPdfBase64 = reader.result.split(',')[1];
+                        
+                        // Send email with the modified PDF only for GST bill
+                        const recipients = [
+                            "sethytrinatha25@gmail.com",
+                            "sethytrinatha5@gmail.com",
+                            "jiteshmohapatra2000@gmail.com"
+                        ];
+                        
+                        fetch('/send_pdf_email', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                pdfBase64: modifiedPdfBase64,
+                                fileName: `GST_Bill_${transactionId}_with_voucher.pdf`,
+                                recipients
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('✅ Mail sent successfully!');
+                            } else {
+                                alert('⚠️ Failed to send email.');
+                            }
+                            callback({ pdfBase64: modifiedPdfBase64, fileName: `GST_Bill_${transactionId}_with_voucher.pdf` });
+                        })
+                        .catch(err => {
+                            console.error('Error sending PDF email:', err);
+                            alert('❌ Error sending email.');
+                            callback({ pdfBase64: modifiedPdfBase64, fileName: `GST_Bill_${transactionId}_with_voucher.pdf` });
+                        });
+                    };
+                    reader.readAsDataURL(blob);
+                } else {
+                    // Fallback to original behavior
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = URL.createObjectURL(uploadedPdfFile);
+                    downloadLink.download = `GST_Bill_${transactionId}.pdf`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    downloadLink.remove();
+                    
+                    alert("✅ Uploaded GST Bill PDF downloaded!");
+                    callback(null);
+                }
             } else {
-                alert('⚠️ Failed to send PDF email.');
-            }
-        })
-        .catch(err => {
-            console.error('Error sending PDF email:', err);
-            alert('❌ Error sending email.');
-        });
+                // If no PDF was uploaded, save the generated PDF
+                doc.save(fileName);
+                
+                // Show message that PDF has been downloaded
+                alert("✅ Justification PDF downloaded!");
+                
+                // Send email with the generated PDF for GST bill after download
+                setTimeout(() => {
+                    const recipients = [
+                        "sethytrinatha25@gmail.com",
+                        "sethytrinatha5@gmail.com",
+                        "jiteshmohapatra2000@gmail.com"
+                    ];
 
-        callback({ pdfBase64, fileName });
+                    fetch('/send_pdf_email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pdfBase64: pdfBase64,
+                            fileName: fileName,
+                            recipients
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('✅ Mail sent successfully!');
+                        } else {
+                            alert('⚠️ Failed to send email.');
+                        }
+                        callback({ pdfBase64: pdfBase64, fileName: fileName });
+                    })
+                    .catch(err => {
+                        console.error('Error sending PDF email:', err);
+                        alert('❌ Error sending email.');
+                        callback({ pdfBase64: pdfBase64, fileName: fileName });
+                    });
+                }, 500); // Reduced delay to ensure download completes
+            }
+        } else {
+            // For non-GST mode, just download the generated PDF as before
+            doc.save(fileName);
+            
+            // Show message that PDF has been downloaded
+            alert("✅ Justification PDF downloaded!");
+            
+            // Send email with the generated PDF after download
+            setTimeout(() => {
+                const recipients = [
+                    "sethytrinatha25@gmail.com",
+                    "sethytrinatha5@gmail.com",
+                    "jiteshmohapatra2000@gmail.com"
+                ];
+
+                fetch('/send_pdf_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pdfBase64: pdfBase64,
+                        fileName: fileName,
+                        recipients
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('✅ Mail sent successfully!');
+                    } else {
+                        alert('⚠️ Failed to send email.');
+                    }
+                    callback({ pdfBase64: pdfBase64, fileName: fileName });
+                })
+                .catch(err => {
+                    console.error('Error sending PDF email:', err);
+                    alert('❌ Error sending email.');
+                    callback({ pdfBase64: pdfBase64, fileName: fileName });
+                });
+            }, 500); // Reduced delay to ensure download completes
+        }
     } catch (err) {
         console.error('Error generating PDF:', err);
         alert(`❌ Failed to generate PDF: ${err.message}`);
