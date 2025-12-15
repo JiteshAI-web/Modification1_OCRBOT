@@ -9,10 +9,12 @@ flask
 flask-session
 psycopg2-binary
 word2number
-
+setuptools
+bcrypt
 # Image Processing
 Pillow==10.4.0
 numpy==1.26.4
+PyPDF2
 
 # PaddleOCR (Python 3.10 compatible)
 opencv-python==4.6.0.66

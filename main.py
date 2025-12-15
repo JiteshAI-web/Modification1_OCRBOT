@@ -475,7 +475,7 @@ async def process_receipt(query, user_id, category):
         if record_id:
             transaction_id = fields.get('Transaction ID', 'unknown')
             type_param = category if not category.startswith("gstbill") else "gstbill"
-            link = f"http://192.168.1.27:5000/voucher?transaction_id={transaction_id}&type={type_param}"
+            link = f"http://192.168.1.41:5000/voucher?transaction_id={transaction_id}&type={type_param}"
             
             success_msg = "✅ Data Saved!"
             # for key, value in fields.items():
